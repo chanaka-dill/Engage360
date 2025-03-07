@@ -28,10 +28,7 @@ public class AuthController {
     public List<UserEntity> getAllUsers(){
         return authService.getAllUsers();
     }
-    @PostMapping
-    public UserEntity createUser(@RequestBody RegisterRequestDTO user){
-        return authService.createUser(user);
-    }
+
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginRequestDTO  loginData) {
