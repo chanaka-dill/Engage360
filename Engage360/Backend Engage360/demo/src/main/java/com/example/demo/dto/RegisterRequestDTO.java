@@ -2,7 +2,8 @@ package com.example.demo.dto;
 
 
 public class RegisterRequestDTO {
-    private String name;
+    private String firstname;
+    private String lastname;
     private String email;
     private String username;
     private String password;
@@ -10,8 +11,9 @@ public class RegisterRequestDTO {
 
 
 
-    public RegisterRequestDTO(String name, String email, String username, String password, String role) {
-        this.name = name;
+    public RegisterRequestDTO(String firstname,String lastname, String email, String username, String password, String role) {
+        this.firstname = firstname;
+        this.lastname=lastname;
         this.email = email;
         this.username = username;
         this.password = password;
@@ -25,12 +27,20 @@ public class RegisterRequestDTO {
         this.role = role;
     }
 
-    public String getName() {
-        return name;
+    public String getFirstname() {
+        return firstname;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setFirstname(String firstname) {
+        this.firstname = firstname;
+    }
+
+    public String getLastname() {
+        return lastname;
+    }
+
+    public void setLastname(String lastname) {
+        this.lastname = lastname;
     }
 
     public String getEmail() {

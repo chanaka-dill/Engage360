@@ -10,7 +10,8 @@ public class UserEntity {
 
     @Id
     private String id;
-    private String name;
+    private String firstname;
+    private String lastname;
     @Indexed(unique = true)
     private String email;
     @Indexed(unique = true  )
@@ -19,16 +20,34 @@ public class UserEntity {
     private String password;
 
 
+    public String getFirstname() {
+        return firstname;
+    }
 
-    public UserEntity(String name, String email, String username,String role, String password) {
+    public void setFirstname(String firstname) {
+        this.firstname = firstname;
+    }
 
-        this.name = name;
+    public String getLastname() {
+        return lastname;
+    }
+
+    public void setLastname(String lastname) {
+        this.lastname = lastname;
+    }
+
+    public UserEntity(String firstname, String lastname, String email, String username, String role, String password) {
+
+        this.firstname = firstname;
+        this.lastname=lastname;
         this.email = email;
         this.username = username;
         this.role= role;
         this.password = password;
 
     }
+
+
     public String getRole() {
         return role;
     }
@@ -46,13 +65,6 @@ public class UserEntity {
         this.id = id;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
 
     public String getEmail() {
         return email;
