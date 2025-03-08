@@ -42,10 +42,14 @@ public class AuthService {
         if (userRepository.findByEmail(req.getEmail()).isPresent()) {
             return new RegisterResponseDTO(null, "Email is already registered. Please use a different email.");
         }
+        if (userRepository.findByUsername(req.getUsername()).isPresent()){
+            return new RegisterResponseDTO(null,"Username is already registered. Please use a different username");
+        }
 
         try {
             UserEntity newUser = new UserEntity(
-                    req.getName(),
+                    req.getFirstname(),
+                    req.getLastname(),
                     req.getEmail(),
                     req.getUsername(),
                     req.getRole(),
