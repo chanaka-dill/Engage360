@@ -10,11 +10,13 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class AuthService {
@@ -24,33 +26,50 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JWTService jwtService;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, JWTService jwtService){
-
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, JWTService jwtService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
     }
 
-    public List<UserEntity> getAllUsers(){
+    public List<UserEntity> getAllUsers() {
         return userRepository.findAll();
     }
 
-    public UserEntity createUser(RegisterRequestDTO userData){
-        UserEntity newUser=new UserEntity(userData.getName(),
-                userData.getEmail(),
-                userData.getUsername(),
-                userData.getRole(),
-                passwordEncoder.encode(userData.getPassword()));
-                return userRepository.save(newUser);
+    public RegisterResponseDTO register(RegisterRequestDTO req) {
+        // Check if email is already registered
+        if (userRepository.findByEmail(req.getEmail()).isPresent()) {
+            return new RegisterResponseDTO(null, "Email is already registered. Please use a different email.");
+        }
+
+        try {
+            UserEntity newUser = new UserEntity(
+                    req.getName(),
+                    req.getEmail(),
+                    req.getUsername(),
+                    req.getRole(),
+                    passwordEncoder.encode(req.getPassword()) // Encrypt password
+            );
+
+            UserEntity savedUser = userRepository.save(newUser);
+
+            return new RegisterResponseDTO("User registered successfully with ID: " + savedUser.getId(), null);
+        } catch (DataIntegrityViolationException e) {
+            return new RegisterResponseDTO(null, "Registration failed due to duplicate data.");
+        } catch (Exception e) {
+            return new RegisterResponseDTO(null, "System error occurred: " + e.getMessage());
+        }
     }
 
     public LoginResponseDTO login(LoginRequestDTO loginData) {
-        UserEntity user = userRepository.findByEmail(loginData.getEmail()).orElse(null);
+        Optional<UserEntity> userOptional = userRepository.findByEmail(loginData.getEmail());
 
-        if (user == null) {
+        if (userOptional.isEmpty()) {
             return new LoginResponseDTO(null, null, "User not found", "error");
         }
+
+        UserEntity user = userOptional.get();
 
         try {
             authenticationManager.authenticate(
@@ -60,25 +79,11 @@ public class AuthService {
             return new LoginResponseDTO(null, null, "Invalid credentials", "error");
         }
 
+        // Generate JWT token with user role
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", user.getRole());
 
-        String token = jwtService.getJWTToken(user.getEmail(), claims);  // Generate token using email
+        String token = jwtService.getJWTToken(user.getEmail(), claims);
         return new LoginResponseDTO(token, LocalDateTime.now(), null, "Token generated successfully");
     }
-
-
-    public RegisterResponseDTO register(RegisterRequestDTO req){
-        if(isUserEnable(req.getUsername())) return new RegisterResponseDTO(null,"user already exits in the system ");
-
-        var userData =this.createUser(req);
-        if(userData.getId()==null) return new RegisterResponseDTO(null,"System error ");
-
-        return new RegisterResponseDTO(String.format("user registed at %s ",userData.getId()),null);
-    }
-
-    private Boolean isUserEnable(String email){
-        return userRepository.findByEmail(email).isPresent();
-    }
-
 }
