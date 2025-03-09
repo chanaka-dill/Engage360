@@ -1,9 +1,6 @@
 package com.example.demo.service;
 
-import com.example.demo.dto.LoginRequestDTO;
-import com.example.demo.dto.LoginResponseDTO;
-import com.example.demo.dto.RegisterRequestDTO;
-import com.example.demo.dto.RegisterResponseDTO;
+import com.example.demo.dto.*;
 import com.example.demo.entity.UserEntity;
 import com.example.demo.repository.UserRepository;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -17,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 
 @Service
 public class AuthService {
@@ -25,12 +23,61 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JWTService jwtService;
+    private final EmailService emailService;  // New service to send emails
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, JWTService jwtService) {
+    // Temporary store for OTPs (use a cache like Redis for better performance)
+    private final Map<String, String> otpStorage = new HashMap<>();
+
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, JWTService jwtService, EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
+        this.emailService = emailService;
+    }
+
+    // Generate a 6-digit OTP
+    private String generateOTP() {
+        return String.valueOf(100000 + new Random().nextInt(900000));
+    }
+
+    // Step 1: Request OTP for password reset
+    public String requestPasswordReset(String email) {
+        Optional<UserEntity> userOpt = userRepository.findByEmail(email);
+
+        if (userOpt.isEmpty()) {
+            return "User not found";
+        }
+
+        String otp = generateOTP();
+        otpStorage.put(email, otp);  // Store OTP temporarily
+
+        // Send OTP via email
+        emailService.sendEmail(email, "Password Reset OTP", "Your OTP is: " + otp);
+
+        return "OTP sent successfully";
+    }
+
+    // Step 2: Verify OTP
+    public boolean verifyOTP(String email, String otp) {
+        return otpStorage.containsKey(email) && otpStorage.get(email).equals(otp);
+    }
+
+    // Step 3: Reset Password
+    public String resetPassword(String email, String otp, String newPassword) {
+        if (!verifyOTP(email, otp)) {
+            return "Invalid or expired OTP";
+        }
+
+        Optional<UserEntity> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isPresent()) {
+            UserEntity user = userOpt.get();
+            user.setPassword(passwordEncoder.encode(newPassword));
+            userRepository.save(user);
+            otpStorage.remove(email);  // Clear OTP after successful reset
+            return "Password reset successful";
+        }
+        return "User not found";
     }
 
     public List<UserEntity> getAllUsers() {
